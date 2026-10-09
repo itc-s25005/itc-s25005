@@ -23,8 +23,8 @@ ITカレッジ沖縄 ITスペシャリスト科情報工学コース 2年
 <details>
   <summary>一年生時制作</summary>
   
-  ・[ハイアンドロー](https://github.com/itc-s25005/itc-s25005/blob/main/kadai.py)  
-  ・[楽しく掛け算する](https://github.com/itc-s25005/itc-s25005/blob/main/test.kt)  
+  ・[ハイアンドロー的なプログラム](https://github.com/itc-s25005/itc-s25005/blob/main/kadai.py)  
+  ・[課題:楽しく掛け算できるプログラム](https://github.com/itc-s25005/itc-s25005/blob/main/test.kt)  
 </details>
 
 
