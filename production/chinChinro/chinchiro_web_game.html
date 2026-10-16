@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>豪華Webチンチロリン (Chinchiro Dice)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Canvas Confetti Library -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts for Japanese Traditional aesthetic -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kiwi+Maru:wght@500;700&family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Noto Sans JP', sans-serif;
+            background-color: #0b1d13;
+            background-image: radial-gradient(#1c402b 1px, transparent 1px), radial-gradient(#1c402b 1px, #0b1d13 1px);
+            background-size: 40px 40px;
+            background-position: 0 0, 20px 20px;
+            color: #f3f4f6;
+            touch-action: manipulation;
+        }
+
+        .font-jp-title {
+            font-family: 'Kiwi Maru', serif;
+        }
+
+        /* 3D Dice Styling */
+        .dice-container {
+            perspective: 800px;
+        }
+
+        .dice {
+            width: 90px;
+            height: 90px;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.1s ease-out;
+        }
+
+        /* CSS Grid for 3D Dice Box */
+        .dice-face {
+            position: absolute;
+            width: 90px;
+            height: 90px;
+            background: #ffffff;
+            border: 2px solid #333;
+            border-radius: 16px;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.15), 0 5px 15px rgba(0,0,0,0.3);
+            display: grid;
+            grid-template: repeat(3, 1fr) / repeat(3, 1fr);
+            padding: 8px;
+            box-sizing: border-box;
+            backface-visibility: hidden;
+        }
+
+        .dice-face.face-7 {
+            background: linear-gradient(135deg, #fff7ad 0%, #ffa900 50%, #e60000 100%);
+            border: 3px solid #ffd700;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.8), inset 0 0 10px rgba(255,255,255,0.8);
+        }
+
+        /* Dice Pip */
+        .pip {
+            width: 16px;
+            height: 16px;
+            background-color: #222;
+            border-radius: 50%;
+            justify-self: center;
+            align-self: center;
+            box-shadow: inset 1px 1px 2px rgba(0,0,0,0.6);
+        }
+
+        .pip.red {
+            background-color: #dc2626;
+            width: 22px;
+            height: 22px;
+        }
+
+        .pip.gold-seven {
+            background-color: #900000;
+            color: #fff700;
+            font-weight: 900;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            width: 22px;
+            height: 22px;
+            text-shadow: 0 0 4px #ff0000;
+        }
+
+        /* Dice Face Transforms */
+        .front  { transform: rotateY(0deg) translateZ(45px); }
+        .back   { transform: rotateY(180deg) translateZ(45px); }
+        .right  { transform: rotateY(90deg) translateZ(45px); }
+        .left   { transform: rotateY(-90deg) translateZ(45px); }
+        .top    { transform: rotateX(90deg) translateZ(45px); }
+        .bottom { transform: rotateX(-90deg) translateZ(45px); }
+
+        /* Animation classes */
+        @keyframes roll {
+            0% { transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg) translateY(0); }
+            30% { transform: rotateX(360deg) rotateY(180deg) rotateZ(90deg) translateY(-60px); }
+            70% { transform: rotateX(720deg) rotateY(540deg) rotateZ(270deg) translateY(-20px); }
+            100% { transform: rotateX(1080deg) rotateY(90deg) rotateZ(360deg) translateY(0); }
+        }
+
+        .rolling {
+            animation: roll 0.6s cubic-bezier(0.25, 0.1, 0.25, 1) infinite;
+        }
+
+        /* Felt Bowl Effect */
+        .dice-bowl {
+            background: radial-gradient(circle, #1a5e38 0%, #0d3820 70%, #051a0e 100%);
+            box-shadow: inset 0 10px 30px rgba(0,0,0,0.8), 0 10px 25px rgba(0,0,0,0.5);
+            border: 12px solid #4a2e13;
+        }
+
+        /* Custom Scrollbar for History */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.2);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.2);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255,255,255,0.4);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between p-2 md:p-6 select-none">
+
+    <!-- Main Container -->
+    <div class="max-w-5xl mx-auto w-full flex-grow flex flex-col gap-4">
+
+        <!-- Header Bar -->
+        <header class="flex justify-between items-center bg-zinc-900/90 border border-amber-600/40 rounded-2xl p-4 shadow-xl backdrop-blur-sm">
+            <div class="flex items-center gap-3">
+                <div class="bg-amber-600 text-amber-950 p-2.5 rounded-xl font-bold text-xl shadow-lg">
+                    <i class="fa-solid fa-dice-d6"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl md:text-2xl font-bold font-jp-title text-amber-400 tracking-wider">地下チンチロリン</h1>
+                    <p class="text-xs text-zinc-400">極上の和風サイコロゲーム (回数無制限モード)</p>
+                </div>
+            </div>
+
+            <!-- Header Right Action Buttons -->
+            <div class="flex items-center gap-2">
+                <button id="btn-settings" class="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl transition text-sm flex items-center gap-1.5 border border-zinc-700">
+                    <i class="fa-solid fa-gear"></i> <span class="hidden sm:inline">設定</span>
+                </button>
+                <button id="btn-sound" class="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl transition text-sm flex items-center gap-1.5 border border-zinc-700">
+                    <i id="sound-icon" class="fa-solid fa-volume-high"></i>
+                </button>
+                <button id="btn-quit" class="px-3 py-2 bg-rose-900/80 hover:bg-rose-800 text-rose-200 rounded-xl transition text-sm font-bold border border-rose-700/50 flex items-center gap-1.5">
+                    <i class="fa-solid fa-power-off"></i> <span>終了 (Q)</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Game Area (2 Columns layout on larger screens) -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 flex-grow">
+
+            <!-- Center/Left Game Play Area (Spans 2 cols) -->
+            <div class="lg:col-span-2 flex flex-col gap-4">
+
+                <!-- Dice Rolling Bowl -->
+                <div class="dice-bowl rounded-3xl p-6 md:p-10 flex flex-col justify-center items-center min-h-[280px] md:min-h-[340px] relative overflow-hidden">
+                    
+                    <!-- Bowl Title / Status -->
+                    <div id="hand-display" class="mb-6 px-6 py-2 bg-black/60 backdrop-blur-md border border-amber-500/30 rounded-full text-center min-w-[200px]">
+                        <span id="hand-title" class="text-xl md:text-2xl font-black text-amber-300 tracking-widest font-jp-title">準備完了</span>
+                        <span id="hand-multiplier" class="text-xs text-amber-200/80 ml-2 hidden"></span>
+                    </div>
+
+                    <!-- Dice Box Area -->
+                    <div class="flex justify-center items-center gap-4 md:gap-8 my-4 py-4 min-h-[110px]">
+                        
+                        <!-- Dice 1 -->
+                        <div class="dice-container">
+                            <div id="dice-1" class="dice"></div>
+                        </div>
+
+                        <!-- Dice 2 -->
+                        <div class="dice-container">
+                            <div id="dice-2" class="dice"></div>
+                        </div>
+
+                        <!-- Dice 3 -->
+                        <div class="dice-container">
+                            <div id="dice-3" class="dice"></div>
+                        </div>
+
+                    </div>
+
+                    <!-- Guidance / Shortcut Helper -->
+                    <div class="mt-4 text-xs text-emerald-200/60 flex items-center gap-2">
+                        <span><kbd class="px-2 py-0.5 bg-black/40 border border-emerald-500/30 rounded text-emerald-300">Space</kbd> または <kbd class="px-2 py-0.5 bg-black/40 border border-emerald-500/30 rounded text-emerald-300">Enter</kbd> キーでも振れます</span>
+                    </div>
+                </div>
+
+                <!-- Control Buttons -->
+                <div class="flex gap-3">
+                    <button id="btn-roll" class="flex-1 py-4 bg-gradient-to-r from-amber-500 via-amber-600 to-amber-700 hover:from-amber-400 hover:to-amber-600 text-amber-950 font-black text-xl md:text-2xl rounded-2xl shadow-xl shadow-amber-950/50 transform active:scale-95 transition flex items-center justify-center gap-3 border-2 border-amber-300/40">
+                        <i class="fa-solid fa-dice text-2xl"></i>
+                        <span>サイコロを振る</span>
+                    </button>
+                </div>
+
+                <!-- Stats Bar -->
+                <div class="grid grid-cols-4 gap-2 bg-zinc-900/80 border border-zinc-800 rounded-2xl p-3 text-center">
+                    <div class="bg-zinc-800/50 p-2 rounded-xl">
+                        <div class="text-[10px] text-zinc-400 font-bold uppercase">総試行回数</div>
+                        <div id="stat-total-rolls" class="text-lg md:text-xl font-bold text-zinc-100">0</div>
+                    </div>
+                    <div class="bg-zinc-800/50 p-2 rounded-xl">
+                        <div class="text-[10px] text-zinc-400 font-bold uppercase">役成立数</div>
+                        <div id="stat-hands-formed" class="text-lg md:text-xl font-bold text-emerald-400">0</div>
+                    </div>
+                    <div class="bg-zinc-800/50 p-2 rounded-xl">
+                        <div class="text-[10px] text-zinc-400 font-bold uppercase">イカサマ「7」</div>
+                        <div id="stat-seven-count" class="text-lg md:text-xl font-bold text-amber-400">0</div>
+                    </div>
+                    <div class="bg-zinc-800/50 p-2 rounded-xl">
+                        <div class="text-[10px] text-zinc-400 font-bold uppercase">役成立率</div>
+                        <div id="stat-win-rate" class="text-lg md:text-xl font-bold text-cyan-400">0%</div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Right Column: History List -->
+            <div class="bg-zinc-900/90 border border-zinc-800 rounded-3xl p-4 flex flex-col h-[350px] lg:h-auto shadow-xl">
+                <div class="flex justify-between items-center pb-3 border-b border-zinc-800 mb-3">
+                    <h2 class="font-bold text-zinc-200 flex items-center gap-2">
+                        <i class="fa-solid fa-list-ol text-amber-500"></i>
+                        <span>出目履歴</span>
+                    </h2>
+                    <span id="history-count" class="text-xs bg-zinc-800 px-2 py-0.5 rounded-full text-zinc-400">0件</span>
+                </div>
+
+                <!-- History Items Scroll Container -->
+                <div id="history-list" class="flex-grow overflow-y-auto space-y-2 pr-1">
+                    <!-- Dynamic Items will be rendered here -->
+                    <div id="history-empty" class="text-center py-12 text-zinc-500 text-sm">
+                        まだ履歴がありません。<br>サイコロを振ってください！
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Modal: Settings -->
+    <div id="modal-settings" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-zinc-900 border border-amber-600/40 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-6">
+            <div class="flex justify-between items-center border-b border-zinc-800 pb-3">
+                <h3 class="text-lg font-bold text-amber-400 flex items-center gap-2">
+                    <i class="fa-solid fa-sliders"></i> ゲーム設定
+                </h3>
+                <button id="btn-close-settings" class="text-zinc-400 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <!-- Cheat / Probability Slider -->
+            <div class="space-y-3">
+                <div class="flex justify-between items-center">
+                    <label class="text-sm font-bold text-zinc-200">イカサマ目「7」の出現確率</label>
+                    <span id="prob-value-display" class="text-sm font-bold text-amber-400 bg-amber-950/60 px-2 py-0.5 rounded border border-amber-800">1.0%</span>
+                </div>
+                <input type="range" id="prob-slider" min="0" max="20" step="0.5" value="1.0" class="w-full accent-amber-500 cursor-pointer">
+                <p class="text-xs text-zinc-400">サイコロ1つごとに「7」の目が出る確率を指定します。(デフォルト: 1.0%)</p>
+            </div>
+
+            <!-- Presets -->
+            <div class="grid grid-cols-4 gap-2">
+                <button class="preset-btn px-2 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-xs rounded-lg text-zinc-300 border border-zinc-700" data-val="0">0% (通常)</button>
+                <button class="preset-btn px-2 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-xs rounded-lg text-zinc-300 border border-zinc-700" data-val="1">1% (デフォルト)</button>
+                <button class="preset-btn px-2 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-xs rounded-lg text-zinc-300 border border-zinc-700" data-val="5">5% (高確率)</button>
+                <button class="preset-btn px-2 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-xs rounded-lg text-zinc-300 border border-zinc-700" data-val="15">15% (確変)</button>
+            </div>
+
+            <div class="pt-2 border-t border-zinc-800 flex justify-end">
+                <button id="btn-save-settings" class="px-5 py-2 bg-amber-600 hover:bg-amber-500 text-amber-950 font-bold rounded-xl text-sm">確定</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Summary / Quit Modal -->
+    <div id="modal-summary" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-zinc-900 border border-amber-500/50 rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl text-center space-y-6">
+            <div class="w-16 h-16 bg-amber-500/20 text-amber-400 rounded-full flex items-center justify-center mx-auto text-3xl border border-amber-500/40">
+                <i class="fa-solid fa-trophy"></i>
+            </div>
+            <div>
+                <h3 class="text-2xl font-bold font-jp-title text-amber-400">プレイサマリー</h3>
+                <p class="text-xs text-zinc-400 mt-1">お疲れ様でした！今回の戦績データです。</p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 text-left">
+                <div class="bg-zinc-800/80 p-3 rounded-2xl border border-zinc-700/50">
+                    <span class="text-xs text-zinc-400 block">総サイコロ振出数</span>
+                    <span id="sum-rolls" class="text-xl font-bold text-white">0</span>
+                </div>
+                <div class="bg-zinc-800/80 p-3 rounded-2xl border border-zinc-700/50">
+                    <span class="text-xs text-zinc-400 block">役成立回数</span>
+                    <span id="sum-hands" class="text-xl font-bold text-emerald-400">0</span>
+                </div>
+                <div class="bg-zinc-800/80 p-3 rounded-2xl border border-zinc-700/50">
+                    <span class="text-xs text-zinc-400 block">イカサマ「7」出現</span>
+                    <span id="sum-sevens" class="text-xl font-bold text-amber-400">0</span>
+                </div>
+                <div class="bg-zinc-800/80 p-3 rounded-2xl border border-zinc-700/50">
+                    <span class="text-xs text-zinc-400 block">最高達成役</span>
+                    <span id="sum-best-hand" class="text-sm font-bold text-cyan-300 truncate block">なし</span>
+                </div>
+            </div>
+
+            <div class="flex gap-3 pt-2">
+                <button id="btn-restart" class="flex-1 py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-amber-950 font-bold rounded-xl">
+                    もう一度遊ぶ
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Game Logic -->
+    <script>
+        // Game State Variables
+        const state = {
+            sevenProbability: 0.01, // 1%
+            soundEnabled: true,
+            isRolling: false,
+            totalRolls: 0,
+            handsFormed: 0,
+            sevenCount: 0,
+            history: [],
+            bestHandScore: -1,
+            bestHandName: 'なし'
+        };
+
+        // Audio Effects using Web Audio API (No external sound files required)
+        class SoundFX {
+            constructor() {
+                this.ctx = null;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+
+            playRoll() {
+                if (!state.soundEnabled) return;
+                this.init();
+                
+                // Wooden dice rattle sound effect simulation
+                const now = this.ctx.currentTime;
+                for (let i = 0; i < 4; i++) {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(150 + Math.random() * 200, now + i * 0.08);
+                    osc.frequency.exponentialRampToValueAtTime(40, now + i * 0.08 + 0.05);
+
+                    gain.gain.setValueAtTime(0.3, now + i * 0.08);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.08 + 0.05);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.start(now + i * 0.08);
+                    osc.stop(now + i * 0.08 + 0.06);
+                }
+            }
+
+            playFanfare(isJackpot = false) {
+                if (!state.soundEnabled) return;
+                this.init();
+                const now = this.ctx.currentTime;
+                const freqs = isJackpot ? [523.25, 659.25, 783.99, 1046.50] : [440, 554.37, 659.25];
+                
+                freqs.forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, now + idx * 0.1);
+
+                    gain.gain.setValueAtTime(0.2, now + idx * 0.1);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.1 + (isJackpot ? 0.8 : 0.4));
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.start(now + idx * 0.1);
+                    osc.stop(now + idx * 0.1 + (isJackpot ? 0.8 : 0.4));
+                });
+            }
+        }
+
+        const sound = new SoundFX();
+
+        // Render Pip positions for Dice Face (1 to 7)
+        function renderDiceFace(value) {
+            const pipGrid = {
+                1: [4],
+                2: [0, 8],
+                3: [0, 4, 8],
+                4: [0, 2, 6, 8],
+                5: [0, 2, 4, 6, 8],
+                6: [0, 2, 3, 5, 6, 8],
+                7: [0, 1, 2, 3, 4, 5, 6] // Special 7 arrangement
+            };
+
+            let html = `<div class="dice-face front ${value === 7 ? 'face-7' : ''}">`;
+            const activeIndices = pipGrid[value] || [];
+
+            for (let i = 0; i < 9; i++) {
+                if (activeIndices.includes(i)) {
+                    if (value === 7) {
+                        html += `<div class="pip gold-seven">7</div>`;
+                    } else if (value === 1 && i === 4) {
+                        html += `<div class="pip red"></div>`;
+                    } else {
+                        html += `<div class="pip"></div>`;
+                    }
+                } else {
+                    html += `<div></div>`;
+                }
+            }
+            html += `</div>`;
+            return html;
+        }
+
+        // Initialize Dice Elements
+        function setDiceValue(elementId, value) {
+            const el = document.getElementById(elementId);
+            el.innerHTML = renderDiceFace(value);
+        }
+
+        // Roll Individual Dice Logic (With '7' Probability)
+        function rollSingleDie() {
+            if (Math.random() < state.sevenProbability) {
+                return 7;
+            }
+            return Math.floor(Math.random() * 6) + 1;
+        }
+
+        // Hand Evaluation Engine
+        function evaluateChinchiro(dice) {
+            const sorted = [...dice].sort((a, b) => a - b);
+            const [d1, d2, d3] = sorted;
+
+            // Check if 7 is included
+            const hasSeven = sorted.includes(7);
+
+            // 1. Triple Sevens (777)
+            if (d1 === 7 && d2 === 7 && d3 === 7) {
+                return { name: "777 スリーセブン", score: 1000, type: "jackpot", multiplier: "超大勝ち" };
+            }
+
+            // 2. Contains 7
+            if (hasSeven) {
+                return { name: `イカサマの7 (${sorted.join(',')})`, score: 300, type: "rare", multiplier: "特殊勝ち" };
+            }
+
+            // 3. Pinzoro (1, 1, 1)
+            if (d1 === 1 && d2 === 1 && d3 === 1) {
+                return { name: "ピンゾロ", score: 500, type: "jackpot", multiplier: "5倍勝ち" };
+            }
+
+            // 4. Zorome (2-6)
+            if (d1 === d2 && d2 === d3) {
+                return { name: `${d1} のゾロ目`, score: 200 + d1, type: "win", multiplier: "3倍勝ち" };
+            }
+
+            // 5. Shigoro (4, 5, 6)
+            if (d1 === 4 && d2 === 5 && d3 === 6) {
+                return { name: "シゴロ (4,5,6)", score: 150, type: "win", multiplier: "2倍勝ち" };
+            }
+
+            // 6. Hifumi (1, 2, 3)
+            if (d1 === 1 && d2 === 2 && d3 === 3) {
+                return { name: "ヒフミ (1,2,3)", score: 0, type: "loss", multiplier: "2倍負け" };
+            }
+
+            // 7. Regular Point Hand (Two same numbers, one different)
+            if (d1 === d2) {
+                return { name: `${d3} の目`, score: 10 + d3, type: "normal", multiplier: `${d3}点` };
+            }
+            if (d2 === d3) {
+                return { name: `${d1} の目`, score: 10 + d1, type: "normal", multiplier: `${d1}点` };
+            }
+
+            // 8. Menashi (No hand)
+            return { name: "目なし", score: 1, type: "none", multiplier: "役なし" };
+        }
+
+        // Trigger Rolling Animation & Game Engine
+        function rollDice() {
+            if (state.isRolling) return;
+
+            state.isRolling = true;
+            sound.playRoll();
+
+            const diceEls = [
+                document.getElementById('dice-1'),
+                document.getElementById('dice-2'),
+                document.getElementById('dice-3')
+            ];
+
+            // Add rolling CSS animation
+            diceEls.forEach(el => el.classList.add('rolling'));
+
+            // Title status
+            document.getElementById('hand-title').textContent = "回転中...";
+            document.getElementById('hand-title').className = "text-xl md:text-2xl font-black text-amber-200 animate-pulse font-jp-title";
+            document.getElementById('hand-multiplier').classList.add('hidden');
+
+            setTimeout(() => {
+                // Roll outcomes
+                const diceValues = [rollSingleDie(), rollSingleDie(), rollSingleDie()];
+                
+                // Stop animation & update face
+                diceEls.forEach((el, idx) => {
+                    el.classList.remove('rolling');
+                    setDiceValue(`dice-${idx + 1}`, diceValues[idx]);
+                });
+
+                // Evaluate Result
+                const evalResult = evaluateChinchiro(diceValues);
+
+                // Update Stats
+                state.totalRolls++;
+                if (evalResult.type !== "none") state.handsFormed++;
+                const sevensInRoll = diceValues.filter(v => v === 7).length;
+                state.sevenCount += sevensInRoll;
+
+                // Track Best Hand
+                if (evalResult.score > state.bestHandScore) {
+                    state.bestHandScore = evalResult.score;
+                    state.bestHandName = evalResult.name;
+                }
+
+                // Update UI Display
+                updateHandDisplay(evalResult);
+                addHistoryRecord(diceValues, evalResult);
+                updateStats();
+
+                // Trigger Special Effects for Special Hands
+                if (evalResult.type === "jackpot" || evalResult.type === "rare") {
+                    sound.playFanfare(true);
+                    triggerConfetti();
+                } else if (evalResult.type === "win") {
+                    sound.playFanfare(false);
+                }
+
+                state.isRolling = false;
+            }, 600);
+        }
+
+        // Update Hand Banner UI
+        function updateHandDisplay(result) {
+            const titleEl = document.getElementById('hand-title');
+            const multEl = document.getElementById('hand-multiplier');
+
+            titleEl.textContent = result.name;
+            multEl.textContent = result.multiplier;
+            multEl.classList.remove('hidden');
+
+            // Style depending on result type
+            if (result.type === 'jackpot' || result.type === 'rare') {
+                titleEl.className = "text-2xl md:text-3xl font-black text-amber-300 font-jp-title drop-shadow-[0_0_10px_rgba(255,215,0,0.8)]";
+            } else if (result.type === 'win') {
+                titleEl.className = "text-xl md:text-2xl font-black text-emerald-400 font-jp-title";
+            } else if (result.type === 'loss') {
+                titleEl.className = "text-xl md:text-2xl font-black text-rose-500 font-jp-title";
+            } else if (result.type === 'normal') {
+                titleEl.className = "text-xl md:text-2xl font-black text-cyan-300 font-jp-title";
+            } else {
+                titleEl.className = "text-xl md:text-2xl font-black text-zinc-400 font-jp-title";
+            }
+        }
+
+        // Add Record to History List
+        function addHistoryRecord(dice, result) {
+            const historyList = document.getElementById('history-list');
+            const emptyMsg = document.getElementById('history-empty');
+            if (emptyMsg) emptyMsg.remove();
+
+            const timeStr = new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+            let badgeColor = "bg-zinc-800 text-zinc-400 border-zinc-700";
+            if (result.type === 'jackpot' || result.type === 'rare') badgeColor = "bg-amber-950 text-amber-300 border-amber-600";
+            else if (result.type === 'win') badgeColor = "bg-emerald-950 text-emerald-300 border-emerald-700";
+            else if (result.type === 'normal') badgeColor = "bg-cyan-950 text-cyan-300 border-cyan-800";
+            else if (result.type === 'loss') badgeColor = "bg-rose-950 text-rose-300 border-rose-800";
+
+            const itemHtml = `
+                <div class="bg-zinc-800/60 border border-zinc-700/50 rounded-xl p-2.5 flex items-center justify-between text-xs transition hover:bg-zinc-800">
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] text-zinc-500 font-mono">${timeStr}</span>
+                        <span class="font-mono font-bold text-zinc-200">[${dice.join(', ')}]</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="font-bold text-zinc-200">${result.name}</span>
+                        <span class="px-2 py-0.5 rounded-md text-[10px] border ${badgeColor} font-bold">${result.multiplier}</span>
+                    </div>
+                </div>
+            `;
+
+            historyList.insertAdjacentHTML('afterbegin', itemHtml);
+            document.getElementById('history-count').textContent = `${state.totalRolls}件`;
+        }
+
+        // Update Statistics Panel
+        function updateStats() {
+            document.getElementById('stat-total-rolls').textContent = state.totalRolls;
+            document.getElementById('stat-hands-formed').textContent = state.handsFormed;
+            document.getElementById('stat-seven-count').textContent = state.sevenCount;
+
+            const winRate = state.totalRolls > 0 ? ((state.handsFormed / state.totalRolls) * 100).toFixed(1) : 0;
+            document.getElementById('stat-win-rate').textContent = `${winRate}%`;
+        }
+
+        // Particle Confetti Effect
+        function triggerConfetti() {
+            if (typeof confetti === 'function') {
+                confetti({
+                    particleCount: 80,
+                    spread: 70,
+                    origin: { y: 0.6 }
+                });
+            }
+        }
+
+        // Show Summary Modal (Quit)
+        function showSummary() {
+            document.getElementById('sum-rolls').textContent = state.totalRolls;
+            document.getElementById('sum-hands').textContent = state.handsFormed;
+            document.getElementById('sum-sevens').textContent = state.sevenCount;
+            document.getElementById('sum-best-hand').textContent = state.bestHandName;
+
+            document.getElementById('modal-summary').classList.remove('hidden');
+        }
+
+        // Reset Game Data
+        function resetGame() {
+            state.totalRolls = 0;
+            state.handsFormed = 0;
+            state.sevenCount = 0;
+            state.bestHandScore = -1;
+            state.bestHandName = 'なし';
+
+            updateStats();
+
+            const historyList = document.getElementById('history-list');
+            historyList.innerHTML = `
+                <div id="history-empty" class="text-center py-12 text-zinc-500 text-sm">
+                    まだ履歴がありません。<br>サイコロを振ってください！
+                </div>
+            `;
+            document.getElementById('history-count').textContent = '0件';
+
+            document.getElementById('hand-title').textContent = "準備完了";
+            document.getElementById('hand-title').className = "text-xl md:text-2xl font-black text-amber-300 tracking-widest font-jp-title";
+            document.getElementById('hand-multiplier').classList.add('hidden');
+
+            document.getElementById('modal-summary').classList.add('hidden');
+        }
+
+        // Attach Event Listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initial Dice Setup
+            setDiceValue('dice-1', 1);
+            setDiceValue('dice-2', 2);
+            setDiceValue('dice-3', 3);
+
+            // Roll button
+            document.getElementById('btn-roll').addEventListener('click', rollDice);
+
+            // Keyboard Shortcuts (Space/Enter -> Roll, 'q' -> Quit)
+            document.addEventListener('keydown', (e) => {
+                if (e.target.tagName === 'INPUT') return; // Ignore if inside input
+                if (e.code === 'Space' || e.code === 'Enter') {
+                    e.preventDefault();
+                    rollDice();
+                } else if (e.key === 'q' || e.key === 'Q') {
+                    showSummary();
+                }
+            });
+
+            // Settings Modal
+            const modalSettings = document.getElementById('modal-settings');
+            const slider = document.getElementById('prob-slider');
+            const display = document.getElementById('prob-value-display');
+
+            document.getElementById('btn-settings').addEventListener('click', () => {
+                modalSettings.classList.remove('hidden');
+            });
+            document.getElementById('btn-close-settings').addEventListener('click', () => {
+                modalSettings.classList.add('hidden');
+            });
+            document.getElementById('btn-save-settings').addEventListener('click', () => {
+                modalSettings.classList.add('hidden');
+            });
+
+            slider.addEventListener('input', (e) => {
+                const val = parseFloat(e.target.value);
+                state.sevenProbability = val / 100;
+                display.textContent = `${val.toFixed(1)}%`;
+            });
+
+            document.querySelectorAll('.preset-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const val = parseFloat(e.target.dataset.val);
+                    slider.value = val;
+                    state.sevenProbability = val / 100;
+                    display.textContent = `${val.toFixed(1)}%`;
+                });
+            });
+
+            // Sound Toggle
+            document.getElementById('btn-sound').addEventListener('click', () => {
+                state.soundEnabled = !state.soundEnabled;
+                const icon = document.getElementById('sound-icon');
+                if (state.soundEnabled) {
+                    icon.className = "fa-solid fa-volume-high";
+                    document.getElementById('btn-sound').classList.remove('opacity-50');
+                } else {
+                    icon.className = "fa-solid fa-volume-xmark";
+                    document.getElementById('btn-sound').classList.add('opacity-50');
+                }
+            });
+
+            // Quit / Restart
+            document.getElementById('btn-quit').addEventListener('click', showSummary);
+            document.getElementById('btn-restart').addEventListener('click', resetGame);
+        });
+    </script>
+</body>
+</html>

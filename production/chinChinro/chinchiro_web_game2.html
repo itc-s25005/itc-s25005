@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>豪華カジノWebチンチロリン (Chinchiro Gold)</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Canvas Confetti Library -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Kiwi+Maru:wght@500;700&family=Noto+Sans+JP:wght@400;700;900&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Noto Sans JP', sans-serif;
+            background-color: #08140c;
+            background-image: radial-gradient(#153621 1px, transparent 1px), radial-gradient(#153621 1px, #08140c 1px);
+            background-size: 40px 40px;
+            background-position: 0 0, 20px 20px;
+            color: #f3f4f6;
+            touch-action: manipulation;
+        }
+
+        .font-jp-title {
+            font-family: 'Kiwi Maru', serif;
+        }
+
+        /* 3D Dice Styling */
+        .dice-container {
+            perspective: 800px;
+        }
+
+        .dice {
+            width: 86px;
+            height: 86px;
+            position: relative;
+            transform-style: preserve-3d;
+            transition: transform 0.1s ease-out;
+        }
+
+        /* CSS Grid for 3D Dice Box */
+        .dice-face {
+            position: absolute;
+            width: 86px;
+            height: 86px;
+            background: #ffffff;
+            border: 2px solid #222;
+            border-radius: 16px;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.15), 0 6px 16px rgba(0,0,0,0.4);
+            display: grid;
+            grid-template: repeat(3, 1fr) / repeat(3, 1fr);
+            padding: 8px;
+            box-sizing: border-box;
+            backface-visibility: hidden;
+        }
+
+        .dice-face.face-7 {
+            background: linear-gradient(135deg, #fff7ad 0%, #ffa900 50%, #e60000 100%);
+            border: 3px solid #ffd700;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.9), inset 0 0 10px rgba(255,255,255,0.9);
+        }
+
+        /* Dice Pip */
+        .pip {
+            width: 15px;
+            height: 15px;
+            background-color: #222;
+            border-radius: 50%;
+            justify-self: center;
+            align-self: center;
+            box-shadow: inset 1px 1px 2px rgba(0,0,0,0.6);
+        }
+
+        .pip.red {
+            background-color: #dc2626;
+            width: 22px;
+            height: 22px;
+        }
+
+        .pip.gold-seven {
+            background-color: #800000;
+            color: #fff700;
+            font-weight: 900;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            width: 22px;
+            height: 22px;
+            text-shadow: 0 0 4px #ff0000;
+        }
+
+        /* Dice Face Transforms */
+        .front  { transform: rotateY(0deg) translateZ(43px); }
+        .back   { transform: rotateY(180deg) translateZ(43px); }
+        .right  { transform: rotateY(90deg) translateZ(43px); }
+        .left   { transform: rotateY(-90deg) translateZ(43px); }
+        .top    { transform: rotateX(90deg) translateZ(43px); }
+        .bottom { transform: rotateX(-90deg) translateZ(43px); }
+
+        /* Animation classes */
+        @keyframes roll {
+            0% { transform: rotateX(0deg) rotateY(0deg) rotateZ(0deg) translateY(0); }
+            30% { transform: rotateX(360deg) rotateY(180deg) rotateZ(90deg) translateY(-50px); }
+            70% { transform: rotateX(720deg) rotateY(540deg) rotateZ(270deg) translateY(-15px); }
+            100% { transform: rotateX(1080deg) rotateY(90deg) rotateZ(360deg) translateY(0); }
+        }
+
+        .rolling {
+            animation: roll 0.6s cubic-bezier(0.25, 0.1, 0.25, 1) infinite;
+        }
+
+        /* Felt Bowl Effect */
+        .dice-bowl {
+            background: radial-gradient(circle, #1a5e38 0%, #0c331d 70%, #04140b 100%);
+            box-shadow: inset 0 10px 30px rgba(0,0,0,0.85), 0 10px 25px rgba(0,0,0,0.6);
+            border: 12px solid #4a2e13;
+        }
+
+        /* Score Floating Pop-up Animation */
+        @keyframes floatUp {
+            0% { opacity: 0; transform: translateY(10px) scale(0.8); }
+            20% { opacity: 1; transform: translateY(-10px) scale(1.2); }
+            80% { opacity: 1; transform: translateY(-30px) scale(1); }
+            100% { opacity: 0; transform: translateY(-45px) scale(0.9); }
+        }
+
+        .floating-score {
+            animation: floatUp 1.8s ease-out forwards;
+        }
+
+        /* Custom Scrollbar for History */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.2);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.2);
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(255,255,255,0.4);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between p-2 md:p-6 select-none">
+
+    <!-- Main Container -->
+    <div class="max-w-5xl mx-auto w-full flex-grow flex flex-col gap-4">
+
+        <!-- Header Bar -->
+        <header class="flex justify-between items-center bg-zinc-900/90 border border-amber-600/40 rounded-2xl p-3 md:p-4 shadow-xl backdrop-blur-sm">
+            <div class="flex items-center gap-3">
+                <div class="bg-gradient-to-br from-amber-500 to-amber-700 text-amber-950 p-2.5 rounded-xl font-black text-xl shadow-lg border border-amber-300/40">
+                    <i class="fa-solid fa-coins"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl md:text-2xl font-bold font-jp-title text-amber-400 tracking-wider">地下チンチロリン ゴールド</h1>
+                    <p class="text-xs text-zinc-400">賭け金＆倍率配当対応 カジノモード</p>
+                </div>
+            </div>
+
+            <!-- Header Right Action Buttons -->
+            <div class="flex items-center gap-2">
+                <button id="btn-settings" class="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl transition text-sm flex items-center gap-1.5 border border-zinc-700">
+                    <i class="fa-solid fa-gear"></i> <span class="hidden sm:inline">設定</span>
+                </button>
+                <button id="btn-sound" class="px-3 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl transition text-sm flex items-center gap-1.5 border border-zinc-700">
+                    <i id="sound-icon" class="fa-solid fa-volume-high"></i>
+                </button>
+                <button id="btn-quit" class="px-3 py-2 bg-rose-900/80 hover:bg-rose-800 text-rose-200 rounded-xl transition text-sm font-bold border border-rose-700/50 flex items-center gap-1.5">
+                    <i class="fa-solid fa-power-off"></i> <span>精算 (Q)</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Total Score & High Score Dashboard -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <!-- Current Balance -->
+            <div class="bg-gradient-to-r from-zinc-900 via-amber-950/40 to-zinc-900 border-2 border-amber-500/60 rounded-2xl p-3 flex items-center gap-3 shadow-lg relative overflow-hidden">
+                <div class="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-400 text-xl border border-amber-500/30">
+                    <i class="fa-solid fa-wallet"></i>
+                </div>
+                <div>
+                    <span class="text-[10px] font-bold text-amber-200/70 tracking-widest uppercase block">所持コイン (TOTAL)</span>
+                    <span id="score-display" class="text-2xl font-black text-amber-400 font-mono tracking-tight">1,000</span> <span class="text-xs font-bold text-amber-400/80">pts</span>
+                </div>
+            </div>
+
+            <!-- High Score -->
+            <div class="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-3 flex items-center gap-3 shadow-lg">
+                <div class="w-10 h-10 rounded-xl bg-cyan-500/10 flex items-center justify-center text-cyan-400 text-xl border border-cyan-500/20">
+                    <i class="fa-solid fa-trophy"></i>
+                </div>
+                <div>
+                    <span class="text-[10px] font-bold text-zinc-400 uppercase block">ハイスコア</span>
+                    <span id="high-score-display" class="text-xl font-black text-cyan-300 font-mono">1,000</span> <span class="text-xs text-zinc-400">pts</span>
+                </div>
+            </div>
+
+            <!-- Current Bet -->
+            <div class="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-3 flex items-center gap-3 shadow-lg">
+                <div class="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 text-xl border border-emerald-500/20">
+                    <i class="fa-solid fa-coins"></i>
+                </div>
+                <div>
+                    <span class="text-[10px] font-bold text-zinc-400 uppercase block">現在のBET額</span>
+                    <span id="current-bet-display" class="text-xl font-black text-emerald-400 font-mono">50</span> <span class="text-xs text-zinc-400">pts</span>
+                </div>
+            </div>
+
+            <!-- Total Net P/L -->
+            <div class="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-3 flex items-center gap-3 shadow-lg">
+                <div class="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-400 text-xl border border-purple-500/20">
+                    <i class="fa-solid fa-chart-line"></i>
+                </div>
+                <div>
+                    <span class="text-[10px] font-bold text-zinc-400 uppercase block">通算損益</span>
+                    <span id="total-profit-display" class="text-xl font-black text-zinc-300 font-mono">±0</span> <span class="text-xs text-zinc-400">pts</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Game Area -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 flex-grow">
+
+            <!-- Center/Left Game Play Area (Spans 2 cols) -->
+            <div class="lg:col-span-2 flex flex-col gap-4">
+
+                <!-- Dice Rolling Bowl -->
+                <div class="dice-bowl rounded-3xl p-6 md:p-8 flex flex-col justify-center items-center min-h-[260px] md:min-h-[310px] relative overflow-hidden">
+                    
+                    <!-- Floating Gain/Loss Animation Canvas Container -->
+                    <div id="floating-score-container" class="absolute inset-0 pointer-events-none flex items-center justify-center z-30"></div>
+
+                    <!-- Bowl Title / Status -->
+                    <div id="hand-display" class="mb-4 px-6 py-2 bg-black/70 backdrop-blur-md border border-amber-500/40 rounded-full text-center min-w-[220px]">
+                        <span id="hand-title" class="text-xl md:text-2xl font-black text-amber-300 tracking-widest font-jp-title">BETを選択してください</span>
+                        <span id="hand-multiplier" class="text-xs font-bold text-amber-200/90 ml-2 hidden"></span>
+                    </div>
+
+                    <!-- Dice Box Area -->
+                    <div class="flex justify-center items-center gap-4 md:gap-8 my-2 py-4 min-h-[100px]">
+                        <div class="dice-container"><div id="dice-1" class="dice"></div></div>
+                        <div class="dice-container"><div id="dice-2" class="dice"></div></div>
+                        <div class="dice-container"><div id="dice-3" class="dice"></div></div>
+                    </div>
+
+                    <!-- Shortcut Helper -->
+                    <div class="mt-2 text-xs text-emerald-200/60 flex items-center gap-2">
+                        <span><kbd class="px-2 py-0.5 bg-black/40 border border-emerald-500/30 rounded text-emerald-300">Space</kbd> / <kbd class="px-2 py-0.5 bg-black/40 border border-emerald-500/30 rounded text-emerald-300">Enter</kbd> キーで振る</span>
+                    </div>
+                </div>
+
+                <!-- BET Selection Control Panel -->
+                <div class="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-3 flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <div class="text-xs font-bold text-zinc-400 flex items-center gap-1.5 whitespace-nowrap">
+                        <i class="fa-solid fa-hand-holding-dollar text-amber-400 text-sm"></i> BET額を選択:
+                    </div>
+                    <div class="grid grid-cols-4 gap-2 w-full sm:w-auto flex-grow max-w-md">
+                        <button class="bet-btn py-2 bg-zinc-800 hover:bg-zinc-700 text-amber-400 font-bold rounded-xl text-sm border border-zinc-700 transition" data-bet="10">10</button>
+                        <button class="bet-btn py-2 bg-zinc-800 hover:bg-zinc-700 text-amber-400 font-bold rounded-xl text-sm border border-zinc-700 transition active-bet border-amber-500 bg-amber-950/40" data-bet="50">50</button>
+                        <button class="bet-btn py-2 bg-zinc-800 hover:bg-zinc-700 text-amber-400 font-bold rounded-xl text-sm border border-zinc-700 transition" data-bet="100">100</button>
+                        <button class="bet-btn py-2 bg-rose-950 hover:bg-rose-900 text-rose-300 font-black rounded-xl text-sm border border-rose-700/60 transition" data-bet="all">ALL IN</button>
+                    </div>
+                </div>
+
+                <!-- Main Roll Button -->
+                <button id="btn-roll" class="w-full py-4 bg-gradient-to-r from-amber-500 via-amber-600 to-amber-700 hover:from-amber-400 hover:to-amber-600 text-amber-950 font-black text-xl md:text-2xl rounded-2xl shadow-xl shadow-amber-950/50 transform active:scale-95 transition flex items-center justify-center gap-3 border-2 border-amber-300/40">
+                    <i class="fa-solid fa-dice text-2xl"></i>
+                    <span>サイコロを振る (BET: <span id="btn-bet-text">50</span>)</span>
+                </button>
+
+                <!-- Stats Bar -->
+                <div class="grid grid-cols-4 gap-2 bg-zinc-900/80 border border-zinc-800 rounded-2xl p-2.5 text-center">
+                    <div class="bg-zinc-800/40 p-2 rounded-xl">
+                        <div class="text-[10px] text-zinc-400 font-bold uppercase">総試行回数</div>
+                        <div id="stat-total-rolls" class="text-base md:text-lg font-bold text-zinc-100">0</div>
+                    </div>
+                    <div class="bg-zinc-800/40 p-2 rounded-xl">
+                        <div class="text-[10px] text-zinc-400 font-bold uppercase">勝ち勝率</div>
+                        <div id="stat-win-rate" class="text-base md:text-lg font-bold text-emerald-400">0%</div>
+                    </div>
+                    <div class="bg-zinc-800/40 p-2 rounded-xl">
+                        <div class="text-[10px] text-zinc-400 font-bold uppercase">7出現数</div>
+                        <div id="stat-seven-count" class="text-base md:text-lg font-bold text-amber-400">0</div>
+                    </div>
+                    <div class="bg-zinc-800/40 p-2 rounded-xl">
+                        <div class="text-[10px] text-zinc-400 font-bold uppercase">破産回避率</div>
+                        <div id="stat-survival" class="text-base md:text-lg font-bold text-cyan-400">100%</div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Right Column: History & Multiplier Guide -->
+            <div class="flex flex-col gap-4">
+                
+                <!-- History Container -->
+                <div class="bg-zinc-900/90 border border-zinc-800 rounded-3xl p-4 flex flex-col h-[280px] lg:h-[320px] shadow-xl">
+                    <div class="flex justify-between items-center pb-2 border-b border-zinc-800 mb-2">
+                        <h2 class="font-bold text-xs text-zinc-300 flex items-center gap-2 uppercase tracking-wider">
+                            <i class="fa-solid fa-list-ol text-amber-500"></i> 出目＆損益履歴
+                        </h2>
+                        <span id="history-count" class="text-[10px] bg-zinc-800 px-2 py-0.5 rounded-full text-zinc-400">0件</span>
+                    </div>
+
+                    <!-- History Items Scroll Container -->
+                    <div id="history-list" class="flex-grow overflow-y-auto space-y-2 pr-1">
+                        <div id="history-empty" class="text-center py-10 text-zinc-500 text-xs">
+                            まだ履歴がありません。<br>サイコロを振って勝負開始！
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Paytable Guide -->
+                <div class="bg-zinc-900/90 border border-zinc-800 rounded-2xl p-3 text-xs space-y-2">
+                    <div class="font-bold text-amber-400 flex items-center gap-1.5 border-b border-zinc-800 pb-1.5">
+                        <i class="fa-solid fa-table"></i> 役と配当倍率一覧
+                    </div>
+                    <div class="grid grid-cols-2 gap-x-3 gap-y-1 text-[11px] text-zinc-300">
+                        <div class="flex justify-between"><span class="text-amber-300 font-bold">777</span> <span>固定 +1000 pts</span></div>
+                        <div class="flex justify-between"><span class="text-amber-300 font-bold">イカサマ7</span> <span>BET × 10</span></div>
+                        <div class="flex justify-between"><span class="text-amber-300 font-bold">ピンゾロ</span> <span>BET × 5</span></div>
+                        <div class="flex justify-between"><span class="text-amber-300 font-bold">ゾロ目</span> <span>BET × 3</span></div>
+                        <div class="flex justify-between"><span class="text-emerald-300 font-bold">シゴロ</span> <span>BET × 2</span></div>
+                        <div class="flex justify-between"><span class="text-rose-400 font-bold">ヒフミ</span> <span>BET × -2</span></div>
+                        <div class="flex justify-between"><span class="text-cyan-300 font-bold">通常の目</span> <span>BET × (目の数)</span></div>
+                        <div class="flex justify-between"><span class="text-zinc-400">目なし</span> <span>BET × -0.5</span></div>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Modal: Settings -->
+    <div id="modal-settings" class="fixed inset-0 bg-black/75 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-zinc-900 border border-amber-600/40 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-6">
+            <div class="flex justify-between items-center border-b border-zinc-800 pb-3">
+                <h3 class="text-lg font-bold text-amber-400 flex items-center gap-2">
+                    <i class="fa-solid fa-sliders"></i> ゲーム設定
+                </h3>
+                <button id="btn-close-settings" class="text-zinc-400 hover:text-white text-lg"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+
+            <div class="space-y-3">
+                <div class="flex justify-between items-center">
+                    <label class="text-sm font-bold text-zinc-200">イカサマ目「7」の出現確率</label>
+                    <span id="prob-value-display" class="text-sm font-bold text-amber-400 bg-amber-950/60 px-2 py-0.5 rounded border border-amber-800">1.0%</span>
+                </div>
+                <input type="range" id="prob-slider" min="0" max="20" step="0.5" value="1.0" class="w-full accent-amber-500 cursor-pointer">
+                <p class="text-xs text-zinc-400">サイコロ1つごとに「7」の目が出る確率を指定します。(デフォルト: 1.0%)</p>
+            </div>
+
+            <div class="grid grid-cols-4 gap-2">
+                <button class="preset-btn px-2 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-xs rounded-lg text-zinc-300 border border-zinc-700" data-val="0">0% (通常)</button>
+                <button class="preset-btn px-2 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-xs rounded-lg text-zinc-300 border border-zinc-700" data-val="1">1% (標準)</button>
+                <button class="preset-btn px-2 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-xs rounded-lg text-zinc-300 border border-zinc-700" data-val="5">5% (高確率)</button>
+                <button class="preset-btn px-2 py-1.5 bg-zinc-800 hover:bg-zinc-700 text-xs rounded-lg text-zinc-300 border border-zinc-700" data-val="15">15% (確変)</button>
+            </div>
+
+            <div class="pt-2 border-t border-zinc-800 flex justify-end">
+                <button id="btn-save-settings" class="px-5 py-2 bg-amber-600 hover:bg-amber-500 text-amber-950 font-bold rounded-xl text-sm">確定</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Game Over / Bankrupt -->
+    <div id="modal-bankrupt" class="fixed inset-0 bg-black/85 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-zinc-900 border border-rose-600/60 rounded-3xl p-6 md:p-8 max-w-md w-full shadow-2xl text-center space-y-6">
+            <div class="w-20 h-20 bg-rose-500/20 text-rose-500 rounded-full flex items-center justify-center mx-auto text-4xl border border-rose-500/40">
+                <i class="fa-solid fa-skull"></i>
+            </div>
+            <div>
+                <h3 class="text-3xl font-black font-jp-title text-rose-500">破産！ (GAME OVER)</h3>
+                <p class="text-xs text-zinc-400 mt-2">所持コインが完全に底をつきました...</p>
+            </div>
+
+            <div class="bg-zinc-800/80 p-4 rounded-2xl border border-zinc-700/50 text-left space-y-2 text-xs">
+                <div class="flex justify-between"><span class="text-zinc-400">最終プレイ試行数:</span> <span id="bankrupt-rolls" class="font-bold text-white">0</span></div>
+                <div class="flex justify-between"><span class="text-zinc-400">最高到達スコア:</span> <span id="bankrupt-highscore" class="font-bold text-amber-400">0 pts</span></div>
+            </div>
+
+            <button id="btn-reset-bankrupt" class="w-full py-3.5 bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 text-white font-bold rounded-xl text-base shadow-lg">
+                1,000 pts でやり直す
+            </button>
+        </div>
+    </div>
+
+    <!-- Modal: Summary / Quit Modal -->
+    <div id="modal-summary" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-zinc-900 border border-amber-500/50 rounded-3xl p-6 md:p-8 max-w-lg w-full shadow-2xl text-center space-y-6">
+            <div class="w-16 h-16 bg-amber-500/20 text-amber-400 rounded-full flex items-center justify-center mx-auto text-3xl border border-amber-500/40">
+                <i class="fa-solid fa-cash-register"></i>
+            </div>
+            <div>
+                <h3 class="text-2xl font-bold font-jp-title text-amber-400">精算サマリー</h3>
+                <p class="text-xs text-zinc-400 mt-1">本日の成果と記録データです。</p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 text-left">
+                <div class="bg-zinc-800/80 p-3 rounded-2xl border border-zinc-700/50">
+                    <span class="text-xs text-zinc-400 block">最終所持コイン</span>
+                    <span id="sum-score" class="text-xl font-bold text-amber-400">1,000 pts</span>
+                </div>
+                <div class="bg-zinc-800/80 p-3 rounded-2xl border border-zinc-700/50">
+                    <span class="text-xs text-zinc-400 block">通算純損益</span>
+                    <span id="sum-profit" class="text-xl font-bold text-white">±0 pts</span>
+                </div>
+                <div class="bg-zinc-800/80 p-3 rounded-2xl border border-zinc-700/50">
+                    <span class="text-xs text-zinc-400 block">総サイコロ試行数</span>
+                    <span id="sum-rolls" class="text-xl font-bold text-white">0</span>
+                </div>
+                <div class="bg-zinc-800/80 p-3 rounded-2xl border border-zinc-700/50">
+                    <span class="text-xs text-zinc-400 block">最高到達スコア</span>
+                    <span id="sum-highscore" class="text-xl font-bold text-cyan-300">1,000 pts</span>
+                </div>
+            </div>
+
+            <div class="flex gap-3 pt-2">
+                <button id="btn-restart" class="flex-1 py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-amber-950 font-bold rounded-xl">
+                    ゲームを再開する
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Engine -->
+    <script>
+        // Game State Variables
+        const INITIAL_SCORE = 1000;
+        const state = {
+            score: INITIAL_SCORE,
+            highScore: parseInt(localStorage.getItem('chinchiro_highscore')) || INITIAL_SCORE,
+            currentBet: 50,
+            sevenProbability: 0.01, // 1%
+            soundEnabled: true,
+            isRolling: false,
+            totalRolls: 0,
+            winRolls: 0,
+            sevenCount: 0,
+            history: []
+        };
+
+        // Web Audio API Sound Effects
+        class SoundFX {
+            constructor() { this.ctx = null; }
+            init() { if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)(); }
+
+            playRoll() {
+                if (!state.soundEnabled) return;
+                this.init();
+                const now = this.ctx.currentTime;
+                for (let i = 0; i < 4; i++) {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(160 + Math.random() * 180, now + i * 0.08);
+                    osc.frequency.exponentialRampToValueAtTime(40, now + i * 0.08 + 0.05);
+                    gain.gain.setValueAtTime(0.3, now + i * 0.08);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + i * 0.08 + 0.05);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now + i * 0.08);
+                    osc.stop(now + i * 0.08 + 0.06);
+                }
+            }
+
+            playWin() {
+                if (!state.soundEnabled) return;
+                this.init();
+                const now = this.ctx.currentTime;
+                [523.25, 659.25, 783.99].forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+                    gain.gain.setValueAtTime(0.2, now + idx * 0.08);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.3);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now + idx * 0.08);
+                    osc.stop(now + idx * 0.08 + 0.35);
+                });
+            }
+
+            playJackpot() {
+                if (!state.soundEnabled) return;
+                this.init();
+                const now = this.ctx.currentTime;
+                [523.25, 659.25, 783.99, 1046.50, 1318.51].forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, now + idx * 0.1);
+                    gain.gain.setValueAtTime(0.25, now + idx * 0.1);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.1 + 0.6);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now + idx * 0.1);
+                    osc.stop(now + idx * 0.1 + 0.65);
+                });
+            }
+
+            playLoss() {
+                if (!state.soundEnabled) return;
+                this.init();
+                const now = this.ctx.currentTime;
+                [300, 240, 180].forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(freq, now + idx * 0.12);
+                    gain.gain.setValueAtTime(0.15, now + idx * 0.12);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.12 + 0.15);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now + idx * 0.12);
+                    osc.stop(now + idx * 0.12 + 0.18);
+                });
+            }
+        }
+
+        const sound = new SoundFX();
+
+        // Render Pip positions for Dice Face (1 to 7)
+        function renderDiceFace(value) {
+            const pipGrid = {
+                1: [4],
+                2: [0, 8],
+                3: [0, 4, 8],
+                4: [0, 2, 6, 8],
+                5: [0, 2, 4, 6, 8],
+                6: [0, 2, 3, 5, 6, 8],
+                7: [0, 1, 2, 3, 4, 5, 6]
+            };
+
+            let html = `<div class="dice-face front ${value === 7 ? 'face-7' : ''}">`;
+            const activeIndices = pipGrid[value] || [];
+
+            for (let i = 0; i < 9; i++) {
+                if (activeIndices.includes(i)) {
+                    if (value === 7) {
+                        html += `<div class="pip gold-seven">7</div>`;
+                    } else if (value === 1 && i === 4) {
+                        html += `<div class="pip red"></div>`;
+                    } else {
+                        html += `<div class="pip"></div>`;
+                    }
+                } else {
+                    html += `<div></div>`;
+                }
+            }
+            html += `</div>`;
+            return html;
+        }
+
+        function setDiceValue(elementId, value) {
+            document.getElementById(elementId).innerHTML = renderDiceFace(value);
+        }
+
+        function rollSingleDie() {
+            if (Math.random() < state.sevenProbability) return 7;
+            return Math.floor(Math.random() * 6) + 1;
+        }
+
+        // Chinchiro Hand & Payout Evaluator
+        function evaluateChinchiro(dice, bet) {
+            const sorted = [...dice].sort((a, b) => a - b);
+            const [d1, d2, d3] = sorted;
+            const hasSeven = sorted.includes(7);
+
+            // 1. 777 Triple Sevens
+            if (d1 === 7 && d2 === 7 && d3 === 7) {
+                return { name: "777 スリーセブン", scoreChange: 1000, type: "jackpot", multiplier: "+1,000 pts" };
+            }
+
+            // 2. Contains 7 (Cheat 7)
+            if (hasSeven) {
+                const gain = bet * 10;
+                return { name: `イカサマの7 (${sorted.join(',')})`, scoreChange: gain, type: "jackpot", multiplier: `BET × 10 (+${gain})` };
+            }
+
+            // 3. Pinzoro (1, 1, 1)
+            if (d1 === 1 && d2 === 1 && d3 === 1) {
+                const gain = bet * 5;
+                return { name: "ピンゾロ (1,1,1)", scoreChange: gain, type: "jackpot", multiplier: `BET × 5 (+${gain})` };
+            }
+
+            // 4. Zorome (2-6)
+            if (d1 === d2 && d2 === d3) {
+                const gain = bet * 3;
+                return { name: `${d1} のゾロ目`, scoreChange: gain, type: "win", multiplier: `BET × 3 (+${gain})` };
+            }
+
+            // 5. Shigoro (4, 5, 6)
+            if (d1 === 4 && d2 === 5 && d3 === 6) {
+                const gain = bet * 2;
+                return { name: "シゴロ (4,5,6)", scoreChange: gain, type: "win", multiplier: `BET × 2 (+${gain})` };
+            }
+
+            // 6. Hifumi (1, 2, 3)
+            if (d1 === 1 && d2 === 2 && d3 === 3) {
+                const loss = -bet * 2;
+                return { name: "ヒフミ (1,2,3)", scoreChange: loss, type: "loss", multiplier: `BET × -2 (${loss})` };
+            }
+
+            // 7. Regular Point Hand
+            if (d1 === d2) {
+                const gain = bet * d3;
+                return { name: `${d3} の目`, scoreChange: gain, type: "normal", multiplier: `BET × ${d3} (+${gain})` };
+            }
+            if (d2 === d3) {
+                const gain = bet * d1;
+                return { name: `${d1} の目`, scoreChange: gain, type: "normal", multiplier: `BET × ${d1} (+${gain})` };
+            }
+
+            // 8. Menashi (No hand)
+            const loss = Math.floor(-bet * 0.5);
+            return { name: "目なし", scoreChange: loss, type: "loss", multiplier: `BET × -0.5 (${loss})` };
+        }
+
+        // Trigger Roll
+        function rollDice() {
+            if (state.isRolling) return;
+
+            // Check Bankrupt condition prior to roll
+            if (state.score <= 0) {
+                showBankruptModal();
+                return;
+            }
+
+            // Cap Bet if player score is lower than chosen bet
+            let activeBet = state.currentBet;
+            if (activeBet > state.score) {
+                activeBet = state.score;
+            }
+
+            state.isRolling = true;
+            sound.playRoll();
+
+            const diceEls = [
+                document.getElementById('dice-1'),
+                document.getElementById('dice-2'),
+                document.getElementById('dice-3')
+            ];
+
+            diceEls.forEach(el => el.classList.add('rolling'));
+
+            document.getElementById('hand-title').textContent = "回転中...";
+            document.getElementById('hand-title').className = "text-xl md:text-2xl font-black text-amber-200 animate-pulse font-jp-title";
+            document.getElementById('hand-multiplier').classList.add('hidden');
+
+            setTimeout(() => {
+                const diceValues = [rollSingleDie(), rollSingleDie(), rollSingleDie()];
+
+                diceEls.forEach((el, idx) => {
+                    el.classList.remove('rolling');
+                    setDiceValue(`dice-${idx + 1}`, diceValues[idx]);
+                });
+
+                const result = evaluateChinchiro(diceValues, activeBet);
+
+                // Update Score
+                state.score += result.scoreChange;
+                if (state.score < 0) state.score = 0;
+
+                // High score update
+                if (state.score > state.highScore) {
+                    state.highScore = state.score;
+                    localStorage.setItem('chinchiro_highscore', state.highScore);
+                }
+
+                // Stats
+                state.totalRolls++;
+                if (result.scoreChange > 0) state.winRolls++;
+                state.sevenCount += diceValues.filter(v => v === 7).length;
+
+                // UI Updates
+                updateHandDisplay(result);
+                showFloatingScore(result.scoreChange);
+                addHistoryRecord(diceValues, result, result.scoreChange);
+                updateDashboard();
+
+                // Sound & FX
+                if (result.type === 'jackpot') {
+                    sound.playJackpot();
+                    triggerConfetti();
+                } else if (result.scoreChange > 0) {
+                    sound.playWin();
+                } else {
+                    sound.playLoss();
+                }
+
+                state.isRolling = false;
+
+                // Check for Game Over / Bankrupt
+                if (state.score <= 0) {
+                    setTimeout(showBankruptModal, 1000);
+                }
+
+            }, 600);
+        }
+
+        // Floating gain/loss animation
+        function showFloatingScore(amount) {
+            const container = document.getElementById('floating-score-container');
+            const el = document.createElement('div');
+            
+            const isPositive = amount > 0;
+            const text = isPositive ? `+${amount.toLocaleString()} pts` : `${amount.toLocaleString()} pts`;
+            const colorClass = isPositive ? 'text-emerald-400 border-emerald-500/50 bg-black/80' : 'text-rose-500 border-rose-500/50 bg-black/80';
+
+            el.className = `floating-score font-black text-2xl md:text-4xl px-4 py-2 rounded-2xl border ${colorClass} shadow-2xl tracking-wider font-mono`;
+            el.textContent = text;
+
+            container.appendChild(el);
+            setTimeout(() => el.remove(), 1800);
+        }
+
+        // Update Hand Banner
+        function updateHandDisplay(result) {
+            const titleEl = document.getElementById('hand-title');
+            const multEl = document.getElementById('hand-multiplier');
+
+            titleEl.textContent = result.name;
+            multEl.textContent = result.multiplier;
+            multEl.classList.remove('hidden');
+
+            if (result.type === 'jackpot') {
+                titleEl.className = "text-2xl md:text-3xl font-black text-amber-300 font-jp-title drop-shadow-[0_0_12px_rgba(255,215,0,0.9)]";
+            } else if (result.scoreChange > 0) {
+                titleEl.className = "text-xl md:text-2xl font-black text-emerald-400 font-jp-title";
+            } else {
+                titleEl.className = "text-xl md:text-2xl font-black text-rose-500 font-jp-title";
+            }
+        }
+
+        // Add Record to History
+        function addHistoryRecord(dice, result, delta) {
+            const historyList = document.getElementById('history-list');
+            const emptyMsg = document.getElementById('history-empty');
+            if (emptyMsg) emptyMsg.remove();
+
+            const timeStr = new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const deltaText = delta > 0 ? `+${delta}` : `${delta}`;
+            const deltaColor = delta > 0 ? 'text-emerald-400' : 'text-rose-400';
+
+            const itemHtml = `
+                <div class="bg-zinc-800/60 border border-zinc-700/50 rounded-xl p-2 flex items-center justify-between text-xs transition hover:bg-zinc-800">
+                    <div class="flex items-center gap-2">
+                        <span class="text-[9px] text-zinc-500 font-mono">${timeStr}</span>
+                        <span class="font-mono font-bold text-zinc-200">[${dice.join(',')}]</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="font-bold text-zinc-200">${result.name}</span>
+                        <span class="font-mono font-bold ${deltaColor}">${deltaText} pts</span>
+                    </div>
+                </div>
+            `;
+
+            historyList.insertAdjacentHTML('afterbegin', itemHtml);
+            document.getElementById('history-count').textContent = `${state.totalRolls}件`;
+        }
+
+        // Dashboard Metrics Refresh
+        function updateDashboard() {
+            document.getElementById('score-display').textContent = state.score.toLocaleString();
+            document.getElementById('high-score-display').textContent = state.highScore.toLocaleString();
+            document.getElementById('current-bet-display').textContent = state.currentBet.toLocaleString();
+
+            const netProfit = state.score - INITIAL_SCORE;
+            const profitEl = document.getElementById('total-profit-display');
+            profitEl.textContent = (netProfit >= 0 ? `+${netProfit.toLocaleString()}` : `${netProfit.toLocaleString()}`);
+            profitEl.className = `text-xl font-black font-mono ${netProfit >= 0 ? 'text-emerald-400' : 'text-rose-500'}`;
+
+            document.getElementById('stat-total-rolls').textContent = state.totalRolls;
+            document.getElementById('stat-seven-count').textContent = state.sevenCount;
+
+            const winRate = state.totalRolls > 0 ? ((state.winRolls / state.totalRolls) * 100).toFixed(1) : 0;
+            document.getElementById('stat-win-rate').textContent = `${winRate}%`;
+
+            document.getElementById('btn-bet-text').textContent = state.currentBet;
+        }
+
+        function triggerConfetti() {
+            if (typeof confetti === 'function') {
+                confetti({ particleCount: 90, spread: 80, origin: { y: 0.6 } });
+            }
+        }
+
+        function showBankruptModal() {
+            document.getElementById('bankrupt-rolls').textContent = state.totalRolls;
+            document.getElementById('bankrupt-highscore').textContent = `${state.highScore.toLocaleString()} pts`;
+            document.getElementById('modal-bankrupt').classList.remove('hidden');
+        }
+
+        function resetGame() {
+            state.score = INITIAL_SCORE;
+            state.totalRolls = 0;
+            state.winRolls = 0;
+            state.sevenCount = 0;
+
+            updateDashboard();
+
+            const historyList = document.getElementById('history-list');
+            historyList.innerHTML = `
+                <div id="history-empty" class="text-center py-10 text-zinc-500 text-xs">
+                    まだ履歴がありません。<br>サイコロを振って勝負開始！
+                </div>
+            `;
+            document.getElementById('history-count').textContent = '0件';
+
+            document.getElementById('hand-title').textContent = "BETを選択してください";
+            document.getElementById('hand-title').className = "text-xl md:text-2xl font-black text-amber-300 tracking-widest font-jp-title";
+            document.getElementById('hand-multiplier').classList.add('hidden');
+
+            document.getElementById('modal-bankrupt').classList.add('hidden');
+            document.getElementById('modal-summary').classList.add('hidden');
+        }
+
+        function showSummary() {
+            document.getElementById('sum-score').textContent = `${state.score.toLocaleString()} pts`;
+            const netProfit = state.score - INITIAL_SCORE;
+            document.getElementById('sum-profit').textContent = `${netProfit >= 0 ? '+' : ''}${netProfit.toLocaleString()} pts`;
+            document.getElementById('sum-rolls').textContent = state.totalRolls;
+            document.getElementById('sum-highscore').textContent = `${state.highScore.toLocaleString()} pts`;
+
+            document.getElementById('modal-summary').classList.remove('hidden');
+        }
+
+        // Initialize DOM Event Listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            setDiceValue('dice-1', 1);
+            setDiceValue('dice-2', 2);
+            setDiceValue('dice-3', 3);
+
+            updateDashboard();
+
+            // Main Roll Button
+            document.getElementById('btn-roll').addEventListener('click', rollDice);
+
+            // BET selection buttons
+            document.querySelectorAll('.bet-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    document.querySelectorAll('.bet-btn').forEach(b => {
+                        b.classList.remove('active-bet', 'border-amber-500', 'bg-amber-950/40');
+                    });
+                    btn.classList.add('active-bet', 'border-amber-500', 'bg-amber-950/40');
+
+                    const val = btn.dataset.bet;
+                    if (val === 'all') {
+                        state.currentBet = Math.max(state.score, 10);
+                    } else {
+                        state.currentBet = parseInt(val);
+                    }
+                    updateDashboard();
+                });
+            });
+
+            // Keyboard Shortcuts
+            document.addEventListener('keydown', (e) => {
+                if (e.target.tagName === 'INPUT') return;
+                if (e.code === 'Space' || e.code === 'Enter') {
+                    e.preventDefault();
+                    rollDice();
+                } else if (e.key === 'q' || e.key === 'Q') {
+                    showSummary();
+                }
+            });
+
+            // Settings Modal
+            const modalSettings = document.getElementById('modal-settings');
+            const slider = document.getElementById('prob-slider');
+            const display = document.getElementById('prob-value-display');
+
+            document.getElementById('btn-settings').addEventListener('click', () => modalSettings.classList.remove('hidden'));
+            document.getElementById('btn-close-settings').addEventListener('click', () => modalSettings.classList.add('hidden'));
+            document.getElementById('btn-save-settings').addEventListener('click', () => modalSettings.classList.add('hidden'));
+
+            slider.addEventListener('input', (e) => {
+                const val = parseFloat(e.target.value);
+                state.sevenProbability = val / 100;
+                display.textContent = `${val.toFixed(1)}%`;
+            });
+
+            document.querySelectorAll('.preset-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const val = parseFloat(btn.dataset.val);
+                    slider.value = val;
+                    state.sevenProbability = val / 100;
+                    display.textContent = `${val.toFixed(1)}%`;
+                });
+            });
+
+            // Sound Toggle
+            document.getElementById('btn-sound').addEventListener('click', () => {
+                state.soundEnabled = !state.soundEnabled;
+                const icon = document.getElementById('sound-icon');
+                if (state.soundEnabled) {
+                    icon.className = "fa-solid fa-volume-high";
+                    document.getElementById('btn-sound').classList.remove('opacity-50');
+                } else {
+                    icon.className = "fa-solid fa-volume-xmark";
+                    document.getElementById('btn-sound').classList.add('opacity-50');
+                }
+            });
+
+            // Reset / Quit Actions
+            document.getElementById('btn-reset-bankrupt').addEventListener('click', resetGame);
+            document.getElementById('btn-quit').addEventListener('click', showSummary);
+            document.getElementById('btn-restart').addEventListener('click', () => {
+                document.getElementById('modal-summary').classList.add('hidden');
+            });
+        });
+    </script>
+</body>
+</html>
